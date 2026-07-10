@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>บัญชีเงินส่วนกลาง ECE 26</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+  :root {
+    --board: #0c2b1c;        /* พื้น PCB เขียวเข้ม */
+    --board-deep: #071c12;   /* เขียวเข้มกว่า สำหรับพื้นหลังนอกสุด */
+    --chip: #123824;         /* ตัวชิป/การ์ด เขียวรองพื้น */
+    --silkscreen: #e9f3ea;   /* ตัวหนังสือหลัก สีขาวนวลแบบ silkscreen */
+    --text-dim: #7fa88f;     /* ตัวหนังสือรอง เขียวอมเทา */
+    --copper: #c9932a;       /* เส้นลายทองแดง / เส้นขอบ */
+    --copper-bright: #e8b84b;
+    --led-green: #4fd67a;    /* LED เขียว = จ่ายแล้ว */
+    --led-amber: #f0b429;    /* LED เหลือง = ใช้เครดิต */
+    --led-red: #ef5b52;      /* LED แดง = ยังไม่จ่าย */
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--board-deep);
+    background-image:
+      linear-gradient(var(--board) 1px, transparent 1px),
+      linear-gradient(90deg, var(--board) 1px, transparent 1px);
+    background-size: 26px 26px;
+    color: var(--silkscreen);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    padding: 24px 16px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  /* ===== Header: ป้ายชิปพิมพ์ silkscreen ===== */
+  header { text-align: center; margin-bottom: 24px; position: relative; }
+  header .eyebrow {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; letter-spacing: 4px; color: var(--copper);
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  header h1 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 26px; margin: 0; letter-spacing: 1px;
+    color: var(--silkscreen);
+    padding: 14px 22px;
+    border: 2px solid var(--copper);
+    border-radius: 4px;
+    display: inline-block;
+    background: var(--chip);
+    position: relative;
+  }
+  /* ขาชิป (pins) ซ้ายขวาบนล่าง แบบ IC */
+  header h1::before, header h1::after {
+    content: ""; position: absolute; width: 14px; height: 3px; background: var(--copper);
+    top: 50%; transform: translateY(-50%);
+  }
+  header h1::before { left: -14px; }
+  header h1::after { right: -14px; }
+  header .sub { font-family: 'Share Tech Mono', monospace; font-size: 12px; color: var(--text-dim); margin-top: 10px; }
+
+  /* ===== เส้นแบ่ง = ลายวงจร (trace) พร้อมจุด via ===== */
+  .trace-line { display:flex; align-items:center; gap:10px; margin: 28px 0 16px; }
+  .trace-line::before, .trace-line::after {
+    content:""; flex:1; height: 2px; background: var(--copper); opacity: 0.5;
+    background-image: radial-gradient(circle, var(--copper) 1.5px, transparent 1.5px);
+    background-size: 10px 2px; background-repeat: repeat-x;
+  }
+  .trace-line span {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; color: var(--copper); white-space: nowrap;
+  }
+
+  /* ===== การ์ดสถิติ = ทรงชิป IC ===== */
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 8px; }
+  @media (min-width: 600px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+  .stat-card {
+    background: var(--chip); border: 1px solid var(--copper); border-radius: 3px;
+    padding: 14px 12px; position: relative;
+  }
+  .stat-card::before {
+    content: ""; position: absolute; top: -4px; left: 14px; width: 10px; height: 4px; background: var(--copper);
+  }
+  .stat-card .label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase;
+  }
+  .stat-card .value { font-size: 19px; font-weight: 700; margin-top: 6px; color: var(--silkscreen); }
+  .stat-card.net .value { color: var(--led-green); }
+  .stat-card.exp .value { color: var(--led-red); }
+
+  /* ===== กล่องเช็คสถานะ = จอมัลติมิเตอร์ ===== */
+  .lookup {
+    background: var(--chip); border: 1px solid var(--copper); border-radius: 3px;
+    padding: 18px; margin-top: 24px;
+  }
+  .lookup h2 {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px; margin: 0 0 12px; letter-spacing: 1px; color: var(--copper-bright);
+  }
+  .lookup-row { display: flex; gap: 8px; }
+  .lookup-row input {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--text-dim); border-radius: 2px;
+    background: var(--board-deep); color: var(--led-green);
+    font-family: 'Share Tech Mono', monospace; font-size: 15px; letter-spacing: 1px;
+  }
+  .lookup-row input::placeholder { color: var(--text-dim); }
+  .lookup-row input:focus { outline: none; border-color: var(--copper-bright); }
+  .lookup-row button {
+    padding: 10px 18px; border: 1px solid var(--copper); background: var(--copper);
+    color: var(--board-deep); font-family: 'Share Tech Mono', monospace; font-weight: 700;
+    font-size: 13px; letter-spacing: 1px; cursor: pointer; border-radius: 2px;
+  }
+  .lookup-row button:hover { background: var(--copper-bright); border-color: var(--copper-bright); }
+
+  .result { margin-top: 18px; }
+  .result .name { font-size: 16px; font-weight: bold; color: var(--silkscreen); }
+  .result .id { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 1px; }
+  .term-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (min-width: 500px) { .term-grid { grid-template-columns: repeat(4, 1fr); } }
+  .term-cell {
+    border: 1px solid var(--text-dim); border-radius: 2px; padding: 8px; text-align: center; font-size: 12px;
+    background: var(--board-deep);
+  }
+  .term-cell .term-label { font-family: 'Share Tech Mono', monospace; color: var(--text-dim); font-size: 10px; }
+  .term-cell .term-status { margin-top: 5px; font-weight: bold; display:flex; align-items:center; justify-content:center; gap:5px; }
+  .term-cell .term-status::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; display: inline-block;
+    box-shadow: 0 0 5px currentColor;
+  }
+  .paid { color: var(--led-green); }
+  .credit { color: var(--led-amber); }
+  .unpaid { color: var(--led-red); }
+  .not-found { color: var(--led-red); font-size: 13px; margin-top: 12px; font-family: 'Share Tech Mono', monospace; }
+
+  /* ===== โซนแอดมิน ===== */
+  .admin-toggle {
+    text-align: center; margin-top: 40px; font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; color: var(--text-dim); cursor: pointer; letter-spacing: 1px;
+  }
+  .admin-toggle:hover { color: var(--copper-bright); }
+  .admin-gate {
+    display: none; margin-top: 14px; background: var(--chip); border: 1px solid var(--copper); border-radius: 3px;
+    padding: 16px; text-align: center;
+  }
+  .admin-gate.open { display: block; }
+  .admin-gate input {
+    padding: 8px 10px; font-family: 'Share Tech Mono', monospace; margin-right: 6px;
+    border: 1px solid var(--text-dim); border-radius: 2px; background: var(--board-deep); color: var(--silkscreen);
+  }
+  .admin-gate button {
+    padding: 8px 14px; font-family: 'Share Tech Mono', monospace; font-weight: 700;
+    border: 1px solid var(--copper); background: var(--copper); color: var(--board-deep); cursor:pointer; border-radius: 2px;
+  }
+
+  table.admin-table {
+    width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 12px;
+    background: var(--board-deep);
+  }
+  table.admin-table th, table.admin-table td {
+    border: 1px solid var(--chip); padding: 6px 8px; text-align: left;
+  }
+  table.admin-table th {
+    background: var(--chip); font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; letter-spacing: 0.5px; color: var(--copper-bright);
+  }
+  table.admin-table tr:nth-child(even) { background: #0f2e1e; }
+
+  .loading, .error-msg {
+    text-align: center; color: var(--text-dim); font-size: 13px; padding: 20px 0;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  .error-msg { color: var(--led-red); }
+
+  footer {
+    text-align:center; font-family: 'Share Tech Mono', monospace;
+    font-size: 10px; color: var(--text-dim); margin-top: 40px; letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">⚡ EE · Kasetsart Sakon Nakhon</div>
+    <h1>IC-ECE26 :: บัญชีเงินส่วนกลาง</h1>
+    <div class="sub" id="updateNote">// กำลังโหลดข้อมูล...</div>
+  </header>
+
+  <div class="trace-line"><span>[ ภาพรวมกองกลาง ]</span></div>
+  <div class="stats" id="statsGrid">
+    <div class="stat-card"><div class="label">นิสิตทั้งหมด</div><div class="value">–</div></div>
+    <div class="stat-card"><div class="label">เงินสดรับเข้าจริง</div><div class="value">–</div></div>
+    <div class="stat-card exp"><div class="label">รายจ่ายทั้งหมด</div><div class="value">–</div></div>
+    <div class="stat-card net"><div class="label">คงเหลือสุทธิ</div><div class="value">–</div></div>
+  </div>
+
+  <div class="lookup">
+    <h2>&gt; เช็คสถานะการจ่ายเงินของตัวเอง_</h2>
+    <div class="lookup-row">
+      <input type="text" id="sidInput" placeholder="กรอกรหัสนิสิต เช่น 6840201234" inputmode="numeric">
+      <button onclick="lookupStudent()">RUN</button>
+    </div>
+    <div id="lookupResult"></div>
+  </div>
+
+  <div class="admin-toggle" onclick="toggleAdmin()">[ สำหรับแอดมิน/เหรัญญิก &gt;&gt; ]</div>
+  <div class="admin-gate" id="adminGate">
+    <div id="adminLoginBox">
+      <input type="password" id="adminPass" placeholder="รหัสผ่านแอดมิน">
+      <button onclick="checkAdminPass()">UNLOCK</button>
+      <div style="font-size:11px;color:var(--text-dim);margin-top:8px;">
+        * เป็นการกันเผลอเปิดดูเฉยๆ ไม่ใช่ระบบความปลอดภัยจริง เพราะข้อมูลดิบยังอยู่ในไฟล์ CSV สาธารณะอยู่ดี
+      </div>
+    </div>
+    <div id="adminTableWrap" style="display:none;"></div>
+  </div>
+
+  <footer>// ข้อมูลอัปเดตตามรอบ sync ของสคริปต์ ไม่ใช่แบบเรียลไทม์</footer>
+</div>
+
+
+<script>
+// ==============================
+// ⚙️ ตั้งค่า: ใส่ URL ที่ได้จาก Publish to web (CSV) ตรงนี้
+// ==============================
+const SUMMARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSk-xHz1QJ7dt4SuLQ9pGL0waQL3k_CwHgFYujJTN88TGbh6_ev1owg1-yfkx3BqPr2TrCK8J9WZVxS/pub?gid=1825771661&single=true&output=csv";
+const STUDENTS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSk-xHz1QJ7dt4SuLQ9pGL0waQL3k_CwHgFYujJTN88TGbh6_ev1owg1-yfkx3BqPr2TrCK8J9WZVxS/pub?gid=788548190&single=true&output=csv";
+const ADMIN_PASSCODE = "ใส่รหัสสิถึงจะดูได้"; // 🆕 ตั้งตามที่ระบุ
+
+let studentsData = [];
+let summaryData = {};
+
+// พาร์ส CSV ง่ายๆ รองรับฟิลด์ที่ครอบด้วย " "
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+      else if (c === '"') { inQuotes = false; }
+      else field += c;
+    } else {
+      if (c === '"') inQuotes = true;
+      else if (c === ',') { row.push(field); field = ""; }
+      else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i+1] === '\n') i++;
+        row.push(field); rows.push(row); row = []; field = "";
+      } else field += c;
+    }
+  }
+  if (field.length > 0 || row.length > 0) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.length > 1 || (r.length === 1 && r[0] !== ""));
+}
+
+async function loadData() {
+  try {
+    const [sumRes, stuRes] = await Promise.all([
+      fetch(SUMMARY_CSV_URL), fetch(STUDENTS_CSV_URL)
+    ]);
+    const sumText = (await sumRes.text()).replace(/^\uFEFF/, '');
+    const stuText = (await stuRes.text()).replace(/^\uFEFF/, '');
+
+    const sumRows = parseCSV(sumText);
+    sumRows.forEach(r => { if (r[0]) summaryData[r[0].trim()] = r[1] ? r[1].trim() : ""; });
+
+    const stuRows = parseCSV(stuText);
+    const header = stuRows[0];
+    studentsData = stuRows.slice(1).map(r => {
+      const obj = {};
+      header.forEach((h, idx) => obj[h.trim()] = r[idx] ? r[idx].trim() : "");
+      return obj;
+    });
+
+    renderSummary();
+    document.getElementById('updateNote').textContent = "// LOADED OK :: " + studentsData.length + " เรคคอร์ด";
+  } catch (e) {
+    console.error("โหลดข้อมูลไม่สำเร็จ:", e);
+    document.getElementById('updateNote').innerHTML =
+      '<span class="error-msg">โหลดข้อมูลไม่สำเร็จ — เช็คว่าใส่ CSV URL ถูกไหม (' + e.message + ')</span>';
+  }
+}
+
+function findSummaryValue(keyPart) {
+  for (const k in summaryData) {
+    if (k.indexOf(keyPart) !== -1) return summaryData[k];
+  }
+  return "–";
+}
+
+function renderSummary() {
+  const grid = document.getElementById('statsGrid');
+  const cards = grid.querySelectorAll('.stat-card .value');
+  cards[0].textContent = findSummaryValue("นิสิตทั้งหมด");
+  cards[1].textContent = findSummaryValue("รวมเงินสดรับเข้าจริง") + " ฿";
+  cards[2].textContent = findSummaryValue("หักรายจ่ายทั้งหมด") + " ฿";
+  cards[3].textContent = findSummaryValue("เงินสดคงเหลือสุทธิ") + " ฿";
+}
+
+function statusClass(text) {
+  if (text.indexOf("จ่ายแล้ว") !== -1) return "paid";
+  if (text.indexOf("เครดิต") !== -1) return "credit";
+  return "unpaid";
+}
+
+function lookupStudent() {
+  const sid = document.getElementById('sidInput').value.trim();
+  const resultBox = document.getElementById('lookupResult');
+  if (!sid) { resultBox.innerHTML = ""; return; }
+
+  const found = studentsData.find(s => s['รหัสนิสิต'] === sid);
+  if (!found) {
+    resultBox.innerHTML = '<div class="not-found">ไม่พบรหัสนิสิตนี้ในระบบ</div>';
+    return;
+  }
+
+  const terms = ['68/1','68/2','69/1','69/2','70/1','70/2','71/1','71/2'];
+  let termHtml = terms.map(t => {
+    const val = found[t] || "ยังไม่จ่าย";
+    return `<div class="term-cell">
+      <div class="term-label">${t}</div>
+      <div class="term-status ${statusClass(val)}">${val}</div>
+    </div>`;
+  }).join('');
+
+  resultBox.innerHTML = `
+    <div class="result">
+      <div class="name">${found['ชื่อ(ปิดบังบางส่วน)'] || ''}</div>
+      <div class="id">รหัส ${found['รหัสนิสิต']} · ยอดรวมที่จ่ายแล้ว ${found['ยอดรวม(บาท)'] || 0} บาท</div>
+      <div class="term-grid">${termHtml}</div>
+    </div>`;
+}
+
+function toggleAdmin() {
+  document.getElementById('adminGate').classList.toggle('open');
+}
+
+function checkAdminPass() {
+  const val = document.getElementById('adminPass').value;
+  if (val !== ADMIN_PASSCODE) {
+    alert('รหัสผ่านไม่ถูกต้อง');
+    return;
+  }
+  document.getElementById('adminLoginBox').style.display = 'none';
+  const wrap = document.getElementById('adminTableWrap');
+  wrap.style.display = 'block';
+
+  const terms = ['68/1','68/2','69/1','69/2','70/1','70/2','71/1','71/2'];
+  let rowsHtml = studentsData.map(s => `
+    <tr>
+      <td>${s['รหัสนิสิต']}</td>
+      <td>${s['ชื่อ(ปิดบังบางส่วน)']}</td>
+      ${terms.map(t => `<td class="${statusClass(s[t]||'')}">${s[t]||''}</td>`).join('')}
+      <td>${s['ยอดรวม(บาท)']}</td>
+    </tr>`).join('');
+
+  wrap.innerHTML = `
+    <table class="admin-table">
+      <thead><tr>
+        <th>รหัส</th><th>ชื่อ</th>
+        ${terms.map(t => `<th>${t}</th>`).join('')}
+        <th>รวม</th>
+      </tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+}
+
+document.getElementById('sidInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') lookupStudent();
+});
+
+loadData();
+</script>
+</body>
+</html>
